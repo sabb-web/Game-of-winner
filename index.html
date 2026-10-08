@@ -208,7 +208,7 @@
             border-color: #b45309; 
             background: linear-gradient(to bottom, #d97706, #b45309); 
         } 
-        /* Gorgeous Coupon Card Styling for 100-159 Milestone */ 
+        /* Gorgeous Coupon Card Styling for Milestone */ 
         .coupon-card { 
             background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95)); 
             border: 2px solid #38bdf8; 
@@ -342,6 +342,7 @@
     let gameState = 'START';
     let playerName = 'Player';
     let score = 0;
+    let obstaclePassCount = 0; // প্রতি ২ টি বাধা পার হলে স্কোর বাড়াতে কাউন্টার
     let attempts = 0;
     let gameSpeed = 4.5;
     let frameCount = 0;
@@ -437,7 +438,7 @@
     let obstacles = [];
     class Obstacle {
         constructor() {
-            // flying obstacle অনেক কমিয়ে (10%) এবং surprise obstacle অনেক বাড়িয়ে (65%) দেওয়া হয়েছে
+            // flying obstacle কম এবং surprise obstacle বেশি রাখার সেটিংস অপরিবর্তিত রাখা হয়েছে
             const rand = Math.random();
             if (rand < 0.10) {
                 this.type = 'flying';
@@ -532,6 +533,7 @@
 
     function resetGame() {
         score = 0;
+        obstaclePassCount = 0; // গেম রিসেট হলে কাউন্টারও শূন্য হয়ে যাবে
         attempts++;
         gameSpeed = 4.5;
         obstacles = [];
@@ -582,9 +584,14 @@
                 obs.update();
                 obs.draw();
 
+                // প্রতি ২টি বাধা পার হলে ১ স্কোর বাড়ানোর লজিক
                 if (!obs.passed && obs.x + obs.width < player.x) {
                     obs.passed = true;
-                    score++;
+                    obstaclePassCount++;
+                    if (obstaclePassCount >= 2) {
+                        score++;
+                        obstaclePassCount = 0;
+                    }
                 }
 
                 if (checkCollision(player, obs)) {
