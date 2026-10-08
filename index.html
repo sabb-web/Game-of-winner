@@ -343,10 +343,10 @@
     let playerName = 'Player';
     let score = 0;
     let attempts = 0;
-    let gameSpeed = 4.5; // বাড়িয়ে দেওয়া হয়েছে (আগে ৩.০ ছিল)
+    let gameSpeed = 4.5;
     let frameCount = 0;
     let obstacleTimer = 0;
-    let obstacleInterval = 90; // ব্যবধান কমিয়ে দ্রুত বাধা আনা হয়েছে
+    let obstacleInterval = 90;
 
     const titles = [
         { min: 0, title: 'Novice' },
@@ -371,8 +371,8 @@
         height: 50,
         baseY: 245,
         vy: 0,
-        gravity: 0.75, // গ্র্যাভিটি বাড়িয়ে দেওয়া হয়েছে যাতে দ্রুত নিচে নামে
-        jumpForce: -12.0,
+        gravity: 1,
+        jumpForce: -14.0,
         isJumping: false,
         isCrouching: false,
         jump() {
@@ -437,8 +437,16 @@
     let obstacles = [];
     class Obstacle {
         constructor() {
-            // ফ্লাইং এবং সারপ্রাইজ বাধার পরিমাণ বাড়িয়ে দেওয়া হয়েছে
-            this.type = Math.random() < 0.35 ? 'flying' : (Math.random() < 0.5 ? 'surprise' : 'ground');
+            // flying obstacle অনেক কমিয়ে (10%) এবং surprise obstacle অনেক বাড়িয়ে (65%) দেওয়া হয়েছে
+            const rand = Math.random();
+            if (rand < 0.10) {
+                this.type = 'flying';
+            } else if (rand < 0.75) {
+                this.type = 'surprise';
+            } else {
+                this.type = 'ground';
+            }
+
             this.width = 26;
             this.height = this.type === 'flying' ? 26 : (Math.random() < 0.5 ? 42 : 32);
             this.x = canvas.width;
@@ -560,14 +568,12 @@
 
         if (gameState === 'PLAYING') {
             frameCount++;
-            // স্কোর বাড়ার সাথে সাথে স্পিড মারাত্মকভাবে বৃদ্ধি পাবে
             gameSpeed = 4.5 + Math.min(score * 0.04, 4.0);
 
             obstacleTimer++;
             if (obstacleTimer >= obstacleInterval) {
                 obstacles.push(new Obstacle());
                 obstacleTimer = 0;
-                // বাধার মধ্যবর্তী দূরত্ব অনিয়মিত এবং খুব কম রাখা হয়েছে
                 obstacleInterval = Math.max(50, Math.floor(100 - gameSpeed * 5 + Math.random() * 25));
             }
 
