@@ -342,7 +342,7 @@
     let playerName = 'Player'; 
     let score = 0; 
     let attempts = 0; 
-    let gameSpeed = 7.0; 
+    let gameSpeed = 9.0; 
     let frameCount = 0; 
     let obstacleTimer = 0; 
     let nextObstacleInterval = 100; 
@@ -368,7 +368,7 @@
         height: 50, 
         baseY: 245, 
         vy: 0, 
-        gravity: 0.8, 
+        gravity: 0.95, 
         jumpForce: -13.5, 
         isJumping: false, 
         isCrouching: false, 
@@ -377,7 +377,7 @@
                 this.vy = this.jumpForce; 
                 this.isJumping = true; 
                 this.isCrouching = false; 
-                this.height = 50; 
+                this.height = 49; 
             } 
         }, 
         crouch(enable) { 
