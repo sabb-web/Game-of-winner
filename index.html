@@ -293,7 +293,7 @@
         <!-- Start Screen --> 
         <div id="startScreen" class="screen"> 
             <h1>Hero Runner</h1> 
-            <p>Giveaway Edition</p> 
+            <p>Giveaway Edition (Hardcore)</p> 
             <div class="input-group"> 
                 <input type="text" id="playerNameInput" placeholder="Type your name..." maxlength="15"> 
                 <button id="startBtn" class="btn">START GAME</button> 
@@ -315,292 +315,313 @@
     <!-- Footer Section -->
     <footer class="game-footer">
          <span>&copy; All rights reserved by 
-  <a href="https://www.facebook.com/profile.php?id=61595409500759" target="_blank">Programming with Sabbir</a> 
-  and 
-  <a href="https://www.facebook.com/suneo.honekawa.934714" target="_blank">Sabbir</a></span>
+         <a href="https://www.facebook.com/profile.php?id=61595409500759" target="_blank">Programming with Sabbir</a> 
+         and 
+         <a href="https://www.facebook.com/suneo.honekawa.934714" target="_blank">Sabbir</a></span>
     </footer>
 </div> 
-<script> 
-    const canvas = document.getElementById('gameCanvas'); 
-    const ctx = canvas.getContext('2d'); 
-    // UI Elements 
-    const startScreen = document.getElementById('startScreen'); 
-    const gameOverScreen = document.getElementById('gameOverScreen'); 
-    const startBtn = document.getElementById('startBtn'); 
-    const restartBtn = document.getElementById('restartBtn'); 
-    const playerNameInput = document.getElementById('playerNameInput'); 
-    const hudName = document.getElementById('hudName'); 
-    const hudScore = document.getElementById('hudScore'); 
-    const hudTitle = document.getElementById('hudTitle'); 
-    const hudAttempt = document.getElementById('hudAttempt'); 
-    const finalStats = document.getElementById('finalStats'); 
-    const couponContainer = document.getElementById('couponContainer'); 
-    const jumpBtn = document.getElementById('jumpBtn'); 
-    const crouchBtn = document.getElementById('crouchBtn'); 
-    // Game State 
-    let gameState = 'START'; 
-    let playerName = 'Player'; 
-    let score = 0; 
-    let attempts = 0; 
-    let gameSpeed = 9.0; 
-    let frameCount = 0; 
-    let obstacleTimer = 0; 
-    let nextObstacleInterval = 100; 
-    const scoreTitles = [ 
-        { min: 0, title: 'Novice' }, 
-        { min: 20, title: 'Sprinter' }, 
-        { min: 50, title: 'Master' }, 
-        { min: 100, title: 'Elite Pro' }, 
-        { min: 140, title: 'Legend' } 
-    ]; 
-    function getTitleForScore(s) { 
-        let currentTitle = 'Novice'; 
-        for (let t of scoreTitles) { 
-            if (s >= t.min) currentTitle = t.title; 
-        } 
-        return currentTitle; 
-    } 
-    // Hero Object 
-    const hero = { 
-        x: 60, 
-        y: 245, 
-        width: 30, 
-        height: 50, 
-        baseY: 245, 
-        vy: 0, 
-        gravity: 0.95, 
-        jumpForce: -13.5, 
-        isJumping: false, 
-        isCrouching: false, 
-        jump() { 
-            if (!this.isJumping) { 
-                this.vy = this.jumpForce; 
-                this.isJumping = true; 
-                this.isCrouching = false; 
-                this.height = 49; 
-            } 
-        }, 
-        crouch(enable) { 
-            if (this.isJumping) return; 
-            this.isCrouching = enable; 
-            if (enable) { 
-                this.height = 26; 
-                this.y = this.baseY + 24; 
-            } else { 
-                this.height = 50; 
-                this.y = this.baseY; 
-            } 
-        }, 
-        update() { 
-            if (this.isJumping) { 
-                this.vy += this.gravity; 
-                this.y += this.vy; 
-                if (this.y >= this.baseY) { 
-                    this.y = this.baseY; 
-                    this.isJumping = false; 
-                    this.vy = 0; 
-                } 
-            } 
-        }, 
-        draw() { 
-            ctx.save(); 
-            if (this.isCrouching) { 
-                ctx.fillStyle = '#3b82f6'; 
-                ctx.fillRect(this.x, this.y + 6, this.width, this.height - 6); 
-                ctx.fillStyle = '#ef4444'; 
-                ctx.fillRect(this.x + 4, this.y, 22, 10); 
-            } else { 
-                // Legs / Pants 
-                ctx.fillStyle = '#1e3a8a'; 
-                ctx.fillRect(this.x + 5, this.y + 32, 8, 18); 
-                ctx.fillRect(this.x + 17, this.y + 32, 8, 18); 
-                // Jacket / Shirt 
-                ctx.fillStyle = '#38bdf8'; 
-                ctx.shadowColor = '#38bdf8'; 
-                ctx.shadowBlur = 6; 
-                ctx.fillRect(this.x + 3, this.y + 14, 24, 20); 
-                // Belt 
-                ctx.fillStyle = '#0f172a'; 
-                ctx.fillRect(this.x + 3, this.y + 30, 24, 4); 
-                // Head & Face 
-                ctx.fillStyle = '#fde047'; 
-                ctx.fillRect(this.x + 6, this.y + 2, 18, 14); 
-                // Cap 
-                ctx.fillStyle = '#ef4444'; 
-                ctx.fillRect(this.x + 5, this.y - 2, 20, 7); 
-                ctx.fillRect(this.x + 15, this.y - 2, 12, 3); 
-                // Eye 
-                ctx.fillStyle = '#0f172a'; 
-                ctx.fillRect(this.x + 16, this.y + 6, 3, 4); 
-            } 
-            ctx.restore(); 
-        } 
-    }; 
-    let obstacles = []; 
-    class Obstacle { 
-        constructor() { 
-            this.type = Math.random() < 0.25 ? 'flying' : (Math.random() < 0.35 ? 'surprise' : 'ground'); 
-            this.width = 26; 
-            this.height = this.type === 'flying' ? 26 : (Math.random() < 0.5 ? 40 : 30); 
-            this.x = canvas.width; 
-            this.y = this.type === 'flying' ? 180 : (295 - this.height); 
-            this.passed = false; 
-            this.surpriseMoved = false; 
-        } 
-        update() { 
-            this.x -= gameSpeed; 
-            if (this.type === 'surprise' && !this.surpriseMoved && this.x < canvas.width * 0.75) { 
-                this.y += (Math.random() < 0.5 ? -35 : 30); 
-                this.surpriseMoved = true; 
-            } 
-        } 
-        draw() { 
-            ctx.save(); 
-            if (this.type === 'flying') { 
-                ctx.fillStyle = '#f43f5e'; 
-                ctx.shadowColor = '#f43f5e'; 
-                ctx.shadowBlur = 6; 
-                ctx.beginPath(); 
-                ctx.arc(this.x + 13, this.y + 13, 13, 0, Math.PI * 2); 
-                ctx.fill(); 
-            } else if (this.type === 'surprise') { 
-                ctx.fillStyle = '#a855f7'; 
-                ctx.shadowColor = '#a855f7'; 
-                ctx.shadowBlur = 8; 
-                ctx.fillRect(this.x, this.y, this.width, this.height); 
-                ctx.fillStyle = '#fff'; 
-                ctx.font = 'bold 14px monospace'; 
-                ctx.fillText('?', this.x + 8, this.y + 20); 
-            } else { 
-                ctx.fillStyle = '#fb923c'; 
-                ctx.shadowColor = '#fb923c'; 
-                ctx.shadowBlur = 5; 
-                ctx.fillRect(this.x, this.y, this.width, this.height); 
-            } 
-            ctx.restore(); 
-        } 
-    } 
-    // Keyboard controls 
-    window.addEventListener('keydown', (e) => { 
-        if (gameState !== 'PLAYING') return; 
-        if (e.code === 'Space' || e.code === 'ArrowUp') { 
-            e.preventDefault(); 
-            hero.jump(); 
-        } 
-        if (e.code === 'ArrowDown') { 
-            e.preventDefault(); 
-            hero.crouch(true); 
-        } 
-    }); 
-    window.addEventListener('keyup', (e) => { 
-        if (gameState !== 'PLAYING') return; 
-        if (e.code === 'ArrowDown') { 
-            hero.crouch(false); 
-        } 
-    }); 
-    // Touch and Mouse handlers for Console Buttons 
-    jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'PLAYING') hero.jump(); }); 
-    jumpBtn.addEventListener('mousedown', (e) => { e.preventDefault(); if (gameState === 'PLAYING') hero.jump(); }); 
-    crouchBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'PLAYING') hero.crouch(true); }); 
-    crouchBtn.addEventListener('touchend', (e) => { e.preventDefault(); if (gameState === 'PLAYING') hero.crouch(false); }); 
-    crouchBtn.addEventListener('mousedown', (e) => { e.preventDefault(); if (gameState === 'PLAYING') hero.crouch(true); }); 
-    crouchBtn.addEventListener('mouseup', (e) => { e.preventDefault(); if (gameState === 'PLAYING') hero.crouch(false); }); 
-    startBtn.addEventListener('click', () => { 
-        let typed = playerNameInput.value.trim(); 
-        playerName = typed !== '' ? typed : 'Player'; 
-        hudName.innerText = `Hero: ${playerName}`; 
-        startScreen.classList.add('hidden'); 
-        resetGame(); 
-        gameState = 'PLAYING'; 
-    }); 
-    restartBtn.addEventListener('click', () => { 
-        gameOverScreen.classList.add('hidden'); 
-        resetGame(); 
-        gameState = 'PLAYING'; 
-    }); 
-    function resetGame() { 
-        score = 0; 
-        attempts++; 
-        gameSpeed = 3.0; 
-        obstacles = []; 
-        obstacleTimer = 0; 
-        nextObstacleInterval = 150; 
-        hero.y = hero.baseY; 
-        hero.isJumping = false; 
-        hero.isCrouching = false; 
-        hero.height = 50; 
-        hudAttempt.innerText = `Tries: ${attempts}`; 
-        couponContainer.style.display = 'none'; 
-        couponContainer.innerHTML = ''; 
-    } 
-    function checkCollision(r1, r2) { 
-        return ( 
-            r1.x < r2.x + r2.width && 
-            r1.x + r1.width > r2.x && 
-            r1.y < r2.y + r2.height && 
-            r1.y + r1.height > r2.y 
-        ); 
-    } 
-    function gameLoop() { 
-        ctx.clearRect(0, 0, canvas.width, canvas.height); 
-        // Ground Line 
-        ctx.strokeStyle = '#334155'; 
-        ctx.lineWidth = 3; 
-        ctx.beginPath(); 
-        ctx.moveTo(0, 295); 
-        ctx.lineTo(canvas.width, 295); 
-        ctx.stroke(); 
-        if (gameState === 'PLAYING') { 
-            frameCount++; 
-            if (score >= 30) { 
-                gameSpeed = 3.0 + Math.min((score - 30) * 0.015, 2.0); 
-            } 
-            obstacleTimer++; 
-            if (obstacleTimer >= nextObstacleInterval) { 
-                obstacles.push(new Obstacle()); 
-                obstacleTimer = 0; 
-                nextObstacleInterval = Math.max(90, Math.floor(150 - gameSpeed * 10 + Math.random() * 40)); 
-            } 
-            for (let i = obstacles.length - 1; i >= 0; i--) { 
-                let obs = obstacles[i]; 
-                obs.update(); 
-                obs.draw(); 
-                if (!obs.passed && obs.x + obs.width < hero.x) { 
-                    obs.passed = true; 
-                    score++; 
-                } 
-                if (checkCollision(hero, obs)) { 
-                    triggerGameOver(); 
-                } 
-                if (obs.x + obs.width < 0) { 
-                    obstacles.splice(i, 1); 
-                } 
-            } 
-            hero.update(); 
-            hero.draw(); 
-            hudScore.innerText = `Score: ${score}`; 
-            hudTitle.innerText = `Title: ${getTitleForScore(score)}`; 
-        } 
-        requestAnimationFrame(gameLoop); 
-    } 
-    function triggerGameOver() { 
-        gameState = 'GAMEOVER'; 
-        finalStats.innerText = `${playerName}, you scored ${score} points!`; 
-        if (score >= 100  && score <= 300) { 
-            couponContainer.style.display = 'block'; 
-            couponContainer.innerHTML = ` 
-                <div class="coupon-card"> 
-                    <div class="coupon-number">240</div> 
-                    <div class="coupon-instruction">Take a screenshot and inbox Programming with Sabbir Facebook page</div> 
-                    <a href="https://www.facebook.com" target="_blank" class="fb-link-btn">Click Here</a> 
-                </div> 
-            `; 
-        } else { 
-            couponContainer.style.display = 'none'; 
-        } 
-        gameOverScreen.classList.remove('hidden'); 
-    } 
-    requestAnimationFrame(gameLoop); 
-</script> 
+
+<script>
+(function() {
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const startScreen = document.getElementById('startScreen');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const playerNameInput = document.getElementById('playerNameInput');
+    const hudName = document.getElementById('hudName');
+    const hudScore = document.getElementById('hudScore');
+    const hudTitle = document.getElementById('hudTitle');
+    const hudAttempt = document.getElementById('hudAttempt');
+    const finalStats = document.getElementById('finalStats');
+    const couponContainer = document.getElementById('couponContainer');
+    const jumpBtn = document.getElementById('jumpBtn');
+    const crouchBtn = document.getElementById('crouchBtn');
+
+    let gameState = 'START';
+    let playerName = 'Player';
+    let score = 0;
+    let attempts = 0;
+    let gameSpeed = 4.5; // বাড়িয়ে দেওয়া হয়েছে (আগে ৩.০ ছিল)
+    let frameCount = 0;
+    let obstacleTimer = 0;
+    let obstacleInterval = 90; // ব্যবধান কমিয়ে দ্রুত বাধা আনা হয়েছে
+
+    const titles = [
+        { min: 0, title: 'Novice' },
+        { min: 20, title: 'Sprinter' },
+        { min: 50, title: 'Master' },
+        { min: 100, title: 'Elite Pro' },
+        { min: 140, title: 'Legend' }
+    ];
+
+    function getTitle(scr) {
+        let t = 'Novice';
+        for (let item of titles) {
+            if (scr >= item.min) t = item.title;
+        }
+        return t;
+    }
+
+    const player = {
+        x: 60,
+        y: 245,
+        width: 30,
+        height: 50,
+        baseY: 245,
+        vy: 0,
+        gravity: 0.75, // গ্র্যাভিটি বাড়িয়ে দেওয়া হয়েছে যাতে দ্রুত নিচে নামে
+        jumpForce: -12.0,
+        isJumping: false,
+        isCrouching: false,
+        jump() {
+            if (!this.isJumping) {
+                this.vy = this.jumpForce;
+                this.isJumping = true;
+                this.isCrouching = false;
+                this.height = 50;
+            }
+        },
+        crouch(en) {
+            if (this.isJumping) return;
+            this.isCrouching = en;
+            if (en) {
+                this.height = 26;
+                this.y = this.baseY + 24;
+            } else {
+                this.height = 50;
+                this.y = this.baseY;
+            }
+        },
+        update() {
+            if (this.isJumping) {
+                this.vy += this.gravity;
+                this.y += this.vy;
+                if (this.y >= this.baseY) {
+                    this.y = this.baseY;
+                    this.isJumping = false;
+                    this.vy = 0;
+                }
+            }
+        },
+        draw() {
+            ctx.save();
+            if (this.isCrouching) {
+                ctx.fillStyle = '#3b82f6';
+                ctx.fillRect(this.x, this.y + 6, this.width, this.height - 6);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(this.x + 4, this.y, 22, 10);
+            } else {
+                ctx.fillStyle = '#1e3a8a';
+                ctx.fillRect(this.x + 5, this.y + 32, 8, 18);
+                ctx.fillRect(this.x + 17, this.y + 32, 8, 18);
+                ctx.fillStyle = '#38bdf8';
+                ctx.shadowColor = '#38bdf8';
+                ctx.shadowBlur = 6;
+                ctx.fillRect(this.x + 3, this.y + 14, 24, 20);
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(this.x + 3, this.y + 30, 24, 4);
+                ctx.fillStyle = '#fde047';
+                ctx.fillRect(this.x + 6, this.y + 2, 18, 14);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(this.x + 5, this.y - 2, 20, 7);
+                ctx.fillRect(this.x + 15, this.y - 2, 12, 3);
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(this.x + 16, this.y + 6, 3, 4);
+            }
+            ctx.restore();
+        }
+    };
+
+    let obstacles = [];
+    class Obstacle {
+        constructor() {
+            // ফ্লাইং এবং সারপ্রাইজ বাধার পরিমাণ বাড়িয়ে দেওয়া হয়েছে
+            this.type = Math.random() < 0.35 ? 'flying' : (Math.random() < 0.5 ? 'surprise' : 'ground');
+            this.width = 26;
+            this.height = this.type === 'flying' ? 26 : (Math.random() < 0.5 ? 42 : 32);
+            this.x = canvas.width;
+            this.y = this.type === 'flying' ? 170 : (295 - this.height);
+            this.passed = false;
+            this.surpriseMoved = false;
+        }
+        update() {
+            this.x -= gameSpeed;
+            if (this.type === 'surprise' && !this.surpriseMoved && this.x < canvas.width * 0.75) {
+                this.y += (Math.random() < 0.5 ? -40 : 35);
+                this.surpriseMoved = true;
+            }
+        }
+        draw() {
+            ctx.save();
+            if (this.type === 'flying') {
+                ctx.fillStyle = '#f43f5e';
+                ctx.shadowColor = '#f43f5e';
+                ctx.shadowBlur = 6;
+                ctx.beginPath();
+                ctx.arc(this.x + 13, this.y + 13, 13, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (this.type === 'surprise') {
+                ctx.fillStyle = '#a855f7';
+                ctx.shadowColor = '#a855f7';
+                ctx.shadowBlur = 8;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px monospace';
+                ctx.fillText('?', this.x + 8, this.y + 20);
+            } else {
+                ctx.fillStyle = '#fb923c';
+                ctx.shadowColor = '#fb923c';
+                ctx.shadowBlur = 5;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+            ctx.restore();
+        }
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (gameState !== 'PLAYING') return;
+        if (e.code === 'Space' || e.code === 'ArrowUp') {
+            e.preventDefault();
+            player.jump();
+        }
+        if (e.code === 'ArrowDown') {
+            e.preventDefault();
+            player.crouch(true);
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (gameState !== 'PLAYING') return;
+        if (e.code === 'ArrowDown') {
+            player.crouch(false);
+        }
+    });
+
+    jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'PLAYING') player.jump(); });
+    jumpBtn.addEventListener('mousedown', (e) => { e.preventDefault(); if (gameState === 'PLAYING') player.jump(); });
+
+    crouchBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'PLAYING') player.crouch(true); });
+    crouchBtn.addEventListener('touchend', (e) => { e.preventDefault(); if (gameState === 'PLAYING') player.crouch(false); });
+    crouchBtn.addEventListener('mousedown', (e) => { e.preventDefault(); if (gameState === 'PLAYING') player.crouch(true); });
+    crouchBtn.addEventListener('mouseup', (e) => { e.preventDefault(); if (gameState === 'PLAYING') player.crouch(false); });
+
+    startBtn.addEventListener('click', () => {
+        let typed = playerNameInput.value.trim();
+        playerName = typed !== '' ? typed : 'Player';
+        hudName.innerText = `Hero: ${playerName}`;
+        startScreen.classList.add('hidden');
+        resetGame();
+        gameState = 'PLAYING';
+    });
+
+    restartBtn.addEventListener('click', () => {
+        gameOverScreen.classList.add('hidden');
+        resetGame();
+        gameState = 'PLAYING';
+    });
+
+    function resetGame() {
+        score = 0;
+        attempts++;
+        gameSpeed = 4.5;
+        obstacles = [];
+        frameCount = 0;
+        obstacleTimer = 0;
+        obstacleInterval = 90;
+        player.y = player.baseY;
+        player.isJumping = false;
+        player.isCrouching = false;
+        player.height = 50;
+        hudAttempt.innerText = `Tries: ${attempts}`;
+        couponContainer.style.display = 'none';
+        couponContainer.innerHTML = '';
+    }
+
+    function checkCollision(r1, r2) {
+        return (
+            r1.x < r2.x + r2.width &&
+            r1.x + r1.width > r2.x &&
+            r1.y < r2.y + r2.height &&
+            r1.y + r1.height > r2.y
+        );
+    }
+
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, 295);
+        ctx.lineTo(canvas.width, 295);
+        ctx.stroke();
+
+        if (gameState === 'PLAYING') {
+            frameCount++;
+            // স্কোর বাড়ার সাথে সাথে স্পিড মারাত্মকভাবে বৃদ্ধি পাবে
+            gameSpeed = 4.5 + Math.min(score * 0.04, 4.0);
+
+            obstacleTimer++;
+            if (obstacleTimer >= obstacleInterval) {
+                obstacles.push(new Obstacle());
+                obstacleTimer = 0;
+                // বাধার মধ্যবর্তী দূরত্ব অনিয়মিত এবং খুব কম রাখা হয়েছে
+                obstacleInterval = Math.max(50, Math.floor(100 - gameSpeed * 5 + Math.random() * 25));
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.update();
+                obs.draw();
+
+                if (!obs.passed && obs.x + obs.width < player.x) {
+                    obs.passed = true;
+                    score++;
+                }
+
+                if (checkCollision(player, obs)) {
+                    gameOver();
+                }
+
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            player.update();
+            player.draw();
+
+            hudScore.innerText = `Score: ${score}`;
+            hudTitle.innerText = `Title: ${getTitle(score)}`;
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    function gameOver() {
+        gameState = 'GAMEOVER';
+        finalStats.innerText = `${playerName}, you scored ${score} points!`;
+
+        if (score >= 100 && score <= 300) {
+            couponContainer.style.display = 'block';
+            couponContainer.innerHTML = `
+                <div class="coupon-card">
+                    <div class="coupon-number">500s</div>
+                    <div class="coupon-instruction">Take a screenshot and inbox Programming with Sabbir Facebook page</div>
+                    <a href="https://www.facebook.com/profile.php?id=61595409500759" target="_blank" class="fb-link-btn">Click Here</a>
+                </div>
+            `;
+        } else {
+            couponContainer.style.display = 'none';
+        }
+
+        gameOverScreen.classList.remove('hidden');
+    }
+
+    requestAnimationFrame(gameLoop);
+})();
+</script>
 </body> 
 </html>
