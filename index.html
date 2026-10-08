@@ -342,7 +342,7 @@
     let gameState = 'START';
     let playerName = 'Player';
     let score = 0;
-    let obstaclePassCount = 0; // প্রতি ২ টি বাধা পার হলে স্কোর বাড়াতে কাউন্টার
+    let obstaclePassCount = 0; 
     let attempts = 0;
     let gameSpeed = 100;
     let frameCount = 0;
@@ -438,7 +438,6 @@
     let obstacles = [];
     class Obstacle {
         constructor() {
-            // flying obstacle কম এবং surprise obstacle বেশি রাখার সেটিংস অপরিবর্তিত রাখা হয়েছে
             const rand = Math.random();
             if (rand < 0.10) {
                 this.type = 'flying';
@@ -533,9 +532,9 @@
 
     function resetGame() {
         score = 0;
-        obstaclePassCount = 0; // গেম রিসেট হলে কাউন্টারও শূন্য হয়ে যাবে
+        obstaclePassCount = 0; 
         attempts++;
-        gameSpeed = 4.5;
+        gameSpeed = 8.0; // <--- এখানে গেমের গতি বাড়িয়ে ৮.০ করা হয়েছে (আগে ছিল 4.5)
         obstacles = [];
         frameCount = 0;
         obstacleTimer = 0;
@@ -570,13 +569,13 @@
 
         if (gameState === 'PLAYING') {
             frameCount++;
-            gameSpeed = 4.5 + Math.min(score * 0.04, 4.0);
+            gameSpeed = 8.0 + Math.min(score * 0.04, 4.0); // প্রগতিশীল গতির ক্ষেত্রেও বেস স্পিড বাড়িয়ে দেওয়া হলো
 
             obstacleTimer++;
             if (obstacleTimer >= obstacleInterval) {
                 obstacles.push(new Obstacle());
                 obstacleTimer = 0;
-                obstacleInterval = Math.max(50, Math.floor(100 - gameSpeed * 5 + Math.random() * 25));
+                obstacleInterval = Math.max(40, Math.floor(90 - gameSpeed * 4 + Math.random() * 20));
             }
 
             for (let i = obstacles.length - 1; i >= 0; i--) {
@@ -584,7 +583,6 @@
                 obs.update();
                 obs.draw();
 
-                // প্রতি ২টি বাধা পার হলে ১ স্কোর বাড়ানোর লজিক
                 if (!obs.passed && obs.x + obs.width < player.x) {
                     obs.passed = true;
                     obstaclePassCount++;
